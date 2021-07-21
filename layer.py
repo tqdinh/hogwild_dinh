@@ -40,7 +40,7 @@ class Convolutional:                                        # convolution layer 
     def __init__(self, name, num_filters=16, stride=1, size=3, activation=None):
         self.name = name
         
-        self.filters = np.random.randn(num_filters, 3, 3) * 0.1
+        self.filters = np.random.randn(num_filters, size, size) * 0.1
         #self.filters = np.zeros(shape=(num_filters, 3, 3)) * 0.1
         
         #print(self.filters)
@@ -162,7 +162,9 @@ class Pooling:                                              # max pooling layer 
         return dout
 
     def get_weights(self):                          # pooling layers have no weights
-        return 0
+        return []
+    def set_weights(self,new_weights):
+        return
 
 class FullyConnected:
     def __init__(self,name,nodes1,nodes2,activation) :

@@ -43,7 +43,7 @@ dataset = preprocess(dataset)
 print('\n--- Building the model ---')                                   # build model
 
 
-server = any
+
 
 model = Network()
 model.build_model(dataset_name)

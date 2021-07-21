@@ -104,9 +104,10 @@ class MY_COORDINATOR:
 
 
     def test_init(self):
-        for i in range(0,len(self.chunks)):
-            print(self.chunks[i].chunk_weights)
-            print(self.chunks[i].time_stamp)
+        # for i in range(0,len(self.chunks)):
+        #     print(self.chunks[i].chunk_weights)
+        #     print(self.chunks[i].time_stamp)
+        return
         
 
 boston_data=pd.DataFrame(load_boston().data,columns=load_boston().feature_names)

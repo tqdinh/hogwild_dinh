@@ -1,19 +1,36 @@
 
-from server.server import data_weight
+
 from numpy import random
 from threading import Lock, Thread
 import copy
 import time
 from typing import List
 import numpy as np
+from config import *
 
-NUMBER_OF_DATA_SPLITED=5
-NUMBER_OF_CLIENT=10
-NUMBER_OF_MODEL_SPLITED=5
-TAU=3
 
 
 class DATA_CHUNKS_HANDLER:
+
+
+    __instance = None
+    @staticmethod 
+    def getInstance():
+      """ Static access method. """
+      if DATA_CHUNKS_HANDLER.__instance == None:
+         DATA_CHUNKS_HANDLER()
+      return DATA_CHUNKS_HANDLER.__instance
+    def __init__(self):
+        
+        self.time_stamp_lock=Lock()
+        self.time_stamp=0
+        self.chunks=[]
+        """ Virtually private constructor. """
+        if DATA_CHUNKS_HANDLER.__instance != None:
+            raise Exception("This class is a singleton!")
+        else:
+            DATA_CHUNKS_HANDLER.__instance = self
+
     class DATA_CHUNK:
         def __init__(self,_weights):
             self.data=copy.copy(_weights)
@@ -44,10 +61,11 @@ class DATA_CHUNKS_HANDLER:
                 time.sleep(0.001)
             return ret
     
-    def __init__(self,_init_weight:List):
-        self.time_stamp_lock=Lock()
-        self.time_stamp=0
-        self.chunks=[]
+    def set_init_weight(self,_init_weight:List):
+        
+        if len(self.chunks) >0:
+            return 
+        
         _init_weight_splited=np.array_split(_init_weight,NUMBER_OF_MODEL_SPLITED)
 
         for i in range(0,len(_init_weight_splited)):
@@ -102,12 +120,10 @@ class DATA_CHUNKS_HANDLER:
             ret+=list_data.tolist()
         return ret
 
-random_list=np.random.rand(100)*0.1
-print(random_list)
-server = DATA_CHUNKS_HANDLER(random_list)
 
-def my_calculation(special_thread):
-    global server
+
+def my_calculation(special_thread,server):
+    
     if True == special_thread:
         time.sleep(20)
     print("read_model")
@@ -139,10 +155,10 @@ def my_calculation(special_thread):
 
 
 if __name__ == "__main__":
-    
+    ___server=DATA_CHUNKS_HANDLER(np.random.rand(100)*0.1)    
     for i in range(0,NUMBER_OF_CLIENT):
     
-        Thread(target=my_calculation,args=(False,) ).start()
-        time.sleep(i)*0.5
-    Thread(target=my_calculation,args=(True,) ).start()
+        Thread(target=my_calculation,args=(False,___server) ).start()
+        time.sleep(i*0.5)
+    #Thread(target=my_calculation,args=(True,___server) ).start()
         
