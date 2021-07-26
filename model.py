@@ -82,7 +82,7 @@ class Network:
             initial_time = time.time()
             for i in range(len(trains['train_images'])):
                 
-                if i % 50 == 0:
+                if i % 100 == 99:
                     accuracy = (num_corr / (i + 1)) * 100       # compute training accuracy and loss up to iteration i
                     loss = tmp_loss / (i + 1)
 

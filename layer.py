@@ -226,8 +226,11 @@ class Dense:
                 continue
            
             t_exp = np.exp(self.last_output)                      # gradient of dout[i] with respect to output
-            dout_dt = -t_exp[i] * t_exp / (np.sum(t_exp) ** 2)
-            dout_dt[i] = t_exp[i] * (np.sum(t_exp) - t_exp[i]) / (np.sum(t_exp) ** 2)
+            max_fature=np.max(self.last_output)
+            t_exp=t_exp -max_fature
+            S=np.sum(t_exp)
+            dout_dt = -t_exp[i] * t_exp / (S ** 2)
+            dout_dt[i] = t_exp[i] * (S - t_exp[i]) / (S ** 2)
 
             dt = gradient * dout_dt                               # gradient of loss with respect to output
             
