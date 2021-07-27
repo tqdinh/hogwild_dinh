@@ -41,18 +41,19 @@ class DATA_CHUNKS_HANDLER:
             self.read_lock=Lock()
             
         
-        def write_data_with_time_stamp(self,_data,_time_stamp):
-            self.write_lock.acquire()
-            self.data=copy.copy(_data)
-            self.private_time_stamp_chunk=_time_stamp
-            self.write_lock.release() 
+        # def write_data_with_time_stamp(self,_data,_time_stamp):
+        #     self.write_lock.acquire()
+        #     self.data=copy.copy(_data)
+        #     self.private_time_stamp_chunk=_time_stamp
+        #     self.write_lock.release() 
 
-        def write_data(self,_data):
+        def chunk_write_data(self,_data):
             self.write_lock.acquire()
             self.data=copy.copy(_data)
-            self.private_time_stamp_chunk+=1
+            self.private_time_stamp_chunk=self.private_time_stamp_chunk+1
+            print("chunk written with time stamp= ",self.private_time_stamp_chunk)
             self.write_lock.release() 
-        def read_data(self):
+        def chunk_read_data(self):
             ret=[]
             while True: 
                 if True != self.write_lock.locked:
@@ -60,10 +61,10 @@ class DATA_CHUNKS_HANDLER:
                     break
                 else:
                     print("thread is block")
-                time.sleep(0.001)
+                
             return ret
             #return (ret,self.private_time_stamp_chunk)
-        def read_time_stamp(self):
+        def chunk_read_time_stamp(self):
             ret=0
             while True: 
                 if True != self.write_lock.locked:
@@ -71,7 +72,7 @@ class DATA_CHUNKS_HANDLER:
                     break
                 else:
                     print("thread is block")
-                time.sleep(0.001)
+                
             return ret
             #return (ret,self.private_time_stamp_chunk)
     
@@ -92,6 +93,8 @@ class DATA_CHUNKS_HANDLER:
                 ret=self.time_stamp
                 break
             time.sleep(0.001)
+        
+        
 
         return ret 
     
@@ -105,31 +108,24 @@ class DATA_CHUNKS_HANDLER:
         self.time_stamp =_time_stamp
         self.time_stamp_lock.release()
     
-    def update_data_chunks_thread(self,_data_chunks,_time_stamp):
-        # if isinstance(_data_chunks,DATA_CHUNKS_HANDLER):
-    
-        print("update submodel with timestamp ",_time_stamp)
-        #print(self.util_get_weights()[0:3])
-        
-        update_available=False
+    def update_data_chunks_thread(self,n_th_thread,_data_chunks,_time_stamp):
+        print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
         
         for i in range(0, len(_data_chunks)):
             current_time_stamp=self.read_time_stamp()
-            print("server time = {0} update time ={1}  ".format(current_time_stamp,_time_stamp))
+            print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
             if _time_stamp >= current_time_stamp - TAU:
-                update_available=True
-                chunk_data=_data_chunks[i].read_data()
-                self.chunks[i].write_data(chunk_data)
-                time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.5
-                time.sleep(time_to_sleep)
+                chunk_data=_data_chunks[i].chunk_read_data()
+                chunk_time_stamp=_data_chunks[i].chunk_read_time_stamp()
+                self.chunks[i].chunk_write_data(chunk_data)
+                #time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.5
+                #time.sleep(time_to_sleep)
                 #self.chunks[i].write_data_with_time_stamp(chunk_data,_time_stamp)
             else:
                 print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
         
         current_time_stamp=self.read_time_stamp()
         
-        print(" _TIME_SERVER {0} TIME_UPDATE ={1}  ".format(current_time_stamp,_time_stamp))
-
         if _time_stamp >= current_time_stamp - TAU:
             if(_time_stamp>=current_time_stamp):
                 self.update_time_stamp(_time_stamp+1)
@@ -141,13 +137,13 @@ class DATA_CHUNKS_HANDLER:
         
         
     
-    def util_get_weights(self):
+    def server_util_get_weights(self):
         ret=[]
         private_time_stamp=[]
         for chunk in self.chunks:
-            list_data=chunk.read_data()
+            list_data=chunk.chunk_read_data()
             ret+=list_data.tolist()
-            private_time_stamp.append(chunk.read_time_stamp())
+            private_time_stamp.append(chunk.chunk_read_time_stamp())
         return (ret,private_time_stamp)
 
 

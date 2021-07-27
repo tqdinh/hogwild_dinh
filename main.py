@@ -39,9 +39,9 @@ plot_missclassified = 0
 plot_feature_maps = 0
 
 
-def run_train(type_n_thread,_model,_trains,_num_epochs,_learning_rate,_validate,_regularization,_plot_weights,_verbose):
+def run_train(n_th_thread,_model,_trains,_num_epochs,_learning_rate,_validate,_regularization,_plot_weights,_verbose):
     _model.train(
-        type_n_thread,
+        n_th_thread,
         _trains,
     _num_epochs,
     _learning_rate,
@@ -111,7 +111,7 @@ for i_type in range(len(plotting_info["n_thread_type"])):
     print("create {0} threads that run {1} epochs".format(n_threads,NUMBER_OF_EPOCH))
     threads=[]
     for i in range(0,n_threads):
-        thread=Thread(target=run_train,args=( i_type,models[i],trains[i],
+        thread=Thread(target=run_train,args=( i,models[i],trains[i],
             NUMBER_OF_EPOCH,
             learning_rate,
             validate,

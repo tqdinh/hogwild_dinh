@@ -33,7 +33,7 @@ class Network:
             total_weights=0
             for i in range(len(self.layers)):
                 w_layer_i=len(self.layers[i].get_weights())
-                print("layer w_ {0}".format(w_layer_i))
+                #print("layer w_ {0}".format(w_layer_i))
                 total_weights+=w_layer_i
                 
             rand=np.random.rand(total_weights)*0.1
@@ -70,18 +70,20 @@ class Network:
     def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
         _time_stamp=self.server.read_time_stamp()
-        (current_model_weights,list_time_stamp)=self.server.util_get_weights()
-        print(list_time_stamp)
+        (current_model_weights,list_time_stamp)=self.server.server_util_get_weights()
+        
         self.set_weights_for_layer(current_model_weights)
        
         history = {'loss': [], 'accuracy': [], 'val_loss': [], 'val_accuracy': []}
-        for epoch in range(1, num_epochs + 1):
+        for epoch in range(0, num_epochs ):
             print('\n--- Epoch {0} ---'.format(epoch))
+            print(list_time_stamp)
             permutation = np.random.permutation(len(dataset["train_images"]))
             train_images=dataset["train_images"]
             train_labels=dataset["train_labels"]
             train_images = train_images[permutation]
             train_labels = train_labels[permutation]
+
             
             loss = 0
             num_correct = 0
@@ -95,11 +97,11 @@ class Network:
 
                     history['loss'].append(loss)                # update history
                     history['accuracy'].append(num_correct/100)
-                    print("update_model_2_server timestamp= {0}",_time_stamp)
-                    self.update_weights_to_server(_time_stamp)
+                    #print("THREAD[{0}] update timestamp= {1}".format(type_n_thread,_time_stamp))
+                    self.update_weights_to_server(type_n_thread,_time_stamp)
 
                     _time_stamp=self.server.read_time_stamp()
-                    (current_model_weights,list_time_stamp)=self.server.util_get_weights()
+                    (current_model_weights,list_time_stamp)=self.server.server_util_get_weights()
                     print(list_time_stamp)
                     self.set_weights_for_layer(current_model_weights)
 
@@ -125,86 +127,9 @@ class Network:
 
                 self.backward(gradient, learning_rate)                      # backward propagation
 
+                
         plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
        
-        if verbose:
-            print('Train Loss: %02.3f' % (history['loss'][-1]))
-            print('Train Accuracy: %02.3f' % (history['accuracy'][-1]))
-            plot_learning_curve(history['loss'])
-            plot_accuracy_curve(history['accuracy'], history['val_accuracy'])
-
-        if plot_weights:
-            for layer in self.layers:
-                if 'pool' not in layer.name:
-                    plot_histogram(layer.name, layer.get_weights())
-
-     
-        # for epoch in range(0,num_epochs):
-        #     print('\n--- Epoch {0}---'.format(epoch))
-        #     loss,tmp_loss,num_corr=0,0,0
-            
-
-        #     data_len=(int)(len(trains['train_images']))
-        #     for i in range(data_len):
-        #         if 0==i%50 :
-                    
-        #             # time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.1
-        #             # time.sleep(time_to_sleep)
-        
-
-        #             accuracy = (num_corr/(i+1))*100
-        #             loss=tmp_loss/(i+1)
-
-        #             # history['loss'].append(loss)                # update history
-        #             # history['accuracy'].append(accuracy)
-
-                
-        #             image = trains['train_images'][i]
-        #             lable = trains['train_labels'][i]
-        #             image=np.pad(image, ((0,0),(2,2),(2,2)),constant_values=0)
-        #             #print('--Forward---')
-
-        #             tmp_output = self.forward(image,plot_feature_maps=0)
-
-        #             tmp_loss+=regularized_cross_entropy ( self.layers, regularization,tmp_output[lable])
-
-        #             if np.argmax (tmp_output) == lable:
-        #                 num_corr+=1
-
-        #             gradient=np.zeros(10)
-
-        #             gradient[lable]=-1/tmp_output[lable] + np.sum( [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers] )
-
-        #             learning_rate = lr_schedule(learning_rate,iteration=i)
-        #             #print('--Gradient---  gradient[{0}] = {1}'.format(lable,gradient[lable]))
-                    
-        #             self.backward(gradient,learning_rate)
-            
-        #     # loss_thread[index].append(loss)
-        #     # accuracy_thread[index].append(accuracy)
-        #     plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
-        #     history['loss'].append(loss)                # update history
-        #     history['accuracy'].append(accuracy)
-
-            
-        #     # for l in self.layers:
-        #     #     weight=l.get_weights()
-        #     #     print('\nname={0}   weight {1} {2}'.format(l.name,weight.shape,type(weight)))
-                    
-        #     if verbose:
-        #         print('Train Loss: %02.3f' % (history['loss'][-1]))
-        #         print('Train Accuracy: %02.3f' % (history['accuracy'][-1]))
-        #         plot_learning_curve(history['loss'])
-        #         plot_accuracy_curve(history['accuracy'], history['val_accuracy'])
-            
-        #         plot_learning_curve(history['loss'])
-            
-        #     # if plot_weights:
-        #     #     for layer in self.layers:
-        #     #         if 'pool' not in layer.name:
-        #     #             plot_histogram(layer.name, layer.get_weights())
-        
-        # self.update_weights_to_server(_time_stamp)
     
     def evaluate(self,X,y,regularization,plot_correct,plot_missclassified,plot_feature_maps,verbose):
         loss,num_correct=0,0
@@ -243,7 +168,7 @@ class Network:
             weights+=self.layers[i].get_weights()
         return weights
 
-    def update_weights_to_server(self,time_stamp):
+    def update_weights_to_server(self,n_th_thread,time_stamp):
         weights=[]
         for i in range(0,len(self.layers)):
             layer=self.layers[i]
@@ -257,7 +182,7 @@ class Network:
         for j in range(0,len(array_weight)):
             chunks.append(DATA_CHUNKS_HANDLER.DATA_CHUNK(array_weight[j]))
         
-        self.server.update_data_chunks_thread(chunks,time_stamp)        
+        self.server.update_data_chunks_thread(n_th_thread,chunks,time_stamp)        
         
             
 
