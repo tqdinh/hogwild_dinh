@@ -51,32 +51,6 @@ def run_train(type_n_thread,_model,_trains,_num_epochs,_learning_rate,_validate,
     _verbose)
 
 
-(train_x, train_y), (test_x, test_y) = keras.datasets.mnist.load_data()
-    
-train_x = train_x / 255.0
-test_x = test_x / 255.0
-
-train_x = tf.expand_dims(train_x, 1)
-test_x = tf.expand_dims(test_x, 1)
-
-val_x = train_x[:5000]
-val_y = train_y[:5000]
-
-train_x=train_x[5000:]
-train_y=train_y[5000:]
-
-
-
-data={
-        'train_images': train_x,
-        'train_labels': train_y,
-        'validation_images': val_x,
-        'validation_labels': val_y,
-        'test_images': test_x,
-        'test_labels': test_y
-}
-
-
 def run_valid(dataset, regularization,plot_correct,plot_missclassified,plot_feature_maps,verbose):
     indices=np.random.permutation(dataset['validation_images'].shape[0])
     val_loss,val_accuracy=model.evaluate(validation_images[indices, :],
@@ -97,8 +71,8 @@ for i_type in range(len(plotting_info["n_thread_type"])):
     print('\n--- Loading ' + dataset_name + ' dataset ---')                 # load dataset
     dataset = load_mnist() if dataset_name == 'mnist' else load_cifar()
 
-    print('\n--- Processing the dataset ---')                               # pre process dataset
-    dataset = preprocess(dataset)
+    # print('\n--- Processing the dataset ---')                               # pre process dataset
+    # dataset = preprocess(dataset)
 
 
     print('\n--- Building the model ---')                                   # build model
@@ -145,7 +119,7 @@ for i_type in range(len(plotting_info["n_thread_type"])):
             plot_weights,
             verbose))
             
-        time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.1
+        time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.2
         time.sleep(time_to_sleep)
         thread.start()
         threads.append(thread)

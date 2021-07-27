@@ -52,6 +52,7 @@ class Convolutional:                                        # convolution layer 
         self.leakyReLU_derivative = np.vectorize(leakyReLU_derivative)
 
     def forward(self, image):
+        image=(image/255)-0.5
         self.last_input = image                             # keep track of last input for later backward propagation
 
         input_dimension = image.shape[1]                                                # input dimension
@@ -162,7 +163,8 @@ class Pooling:                                              # max pooling layer 
         return dout
 
     def get_weights(self):                          # pooling layers have no weights
-        return []
+        return np.array([])
+    
     def set_weights(self,new_weights):
         return
 
@@ -220,27 +222,45 @@ class Dense:
         self.last_input=input
         self.last_output=output
         return softmax(output)
-    def backward (self,din,learning_rate=0.05):
-        for i , gradient in enumerate(din):
-            if 0== gradient:
-                continue
-           
+    def backward(self, din, learning_rate=0.005):
+        for i, gradient in enumerate(din):
+            if gradient == 0:                   # the derivative of the loss with respect to the output is nonzero
+                continue                        # only for the correct class, so skip if the gradient is zero
+
+            #max_fature=np.max(self.last_output)
+                                   
+            #t_exp = np.exp(self.last_output-max_fature)                      # gradient of dout[i] with respect to output
             t_exp = np.exp(self.last_output)                      # gradient of dout[i] with respect to output
-            max_fature=np.max(self.last_output)
-            t_exp=t_exp -max_fature
-            S=np.sum(t_exp)
-            dout_dt = -t_exp[i] * t_exp / (S ** 2)
-            dout_dt[i] = t_exp[i] * (S - t_exp[i]) / (S ** 2)
+            S = np.sum(t_exp)
 
-            dt = gradient * dout_dt                               # gradient of loss with respect to output
-            
-            dout = self.weights @ dt                              # gradient of loss with respect to input
+            d_out_d_t = -t_exp[i] * t_exp / (S ** 2)
+            d_out_d_t[i] = t_exp[i] * (S- t_exp[i]) / (S** 2)
 
-           
-            self.weights -= learning_rate * (np.transpose(self.last_input[np.newaxis]) @ dt[np.newaxis])
-            self.biases -= learning_rate * dt
+            d_t_d_w = self.last_input
+            d_t_d_b = 1
+            d_t_d_inputs = self.weights
 
-            return dout.reshape(self.last_input_shape)            #
+            d_L_d_t = gradient * d_out_d_t
+
+
+            d_L_d_w = d_t_d_w[np.newaxis].T @ d_L_d_t[np.newaxis]
+            d_L_d_b = d_L_d_t * d_t_d_b
+            d_L_d_inputs = d_t_d_inputs @ d_L_d_t
+            self.weights -= learning_rate * d_L_d_w
+            self.biases -= learning_rate * d_L_d_b
+
+            return d_L_d_inputs.reshape(self.last_input_shape)
+
+
+            # dt = gradient * dout_dt                               # gradient of loss with respect to output
+
+            # dout = self.weights @ dt                              # gradient of loss with respect to input
+
+            # # update weights and biases
+            # self.weights -= learning_rate * (np.transpose(self.last_input[np.newaxis]) @ dt[np.newaxis])
+            # self.biases -= learning_rate * dt
+
+            #return dout.reshape(self.last_input_shape)            # return the loss gradient for this layer's inputs
         
     def get_weights(self):
         return np.reshape(self.weights, -1)

@@ -35,6 +35,8 @@ class DATA_CHUNKS_HANDLER:
         def __init__(self,_weights):
             self.data=copy.copy(_weights)
             
+            self.private_time_stamp_chunk=0
+
             self.write_lock=Lock()
             self.read_lock=Lock()
             
@@ -42,13 +44,13 @@ class DATA_CHUNKS_HANDLER:
         def write_data_with_time_stamp(self,_data,_time_stamp):
             self.write_lock.acquire()
             self.data=copy.copy(_data)
-            
+            self.private_time_stamp_chunk=_time_stamp
             self.write_lock.release() 
 
         def write_data(self,_data):
             self.write_lock.acquire()
             self.data=copy.copy(_data)
-    
+            self.private_time_stamp_chunk+=1
             self.write_lock.release() 
         def read_data(self):
             ret=[]
@@ -60,6 +62,18 @@ class DATA_CHUNKS_HANDLER:
                     print("thread is block")
                 time.sleep(0.001)
             return ret
+            #return (ret,self.private_time_stamp_chunk)
+        def read_time_stamp(self):
+            ret=0
+            while True: 
+                if True != self.write_lock.locked:
+                    ret= self.private_time_stamp_chunk
+                    break
+                else:
+                    print("thread is block")
+                time.sleep(0.001)
+            return ret
+            #return (ret,self.private_time_stamp_chunk)
     
     def set_init_weight(self,_init_weight:List):
         
@@ -95,30 +109,46 @@ class DATA_CHUNKS_HANDLER:
         # if isinstance(_data_chunks,DATA_CHUNKS_HANDLER):
     
         print("update submodel with timestamp ",_time_stamp)
-        print(self.util_get_weights()[0:3])
+        #print(self.util_get_weights()[0:3])
         
+        update_available=False
         
         for i in range(0, len(_data_chunks)):
             current_time_stamp=self.read_time_stamp()
+            print("server time = {0} update time ={1}  ".format(current_time_stamp,_time_stamp))
             if _time_stamp >= current_time_stamp - TAU:
+                update_available=True
                 chunk_data=_data_chunks[i].read_data()
                 self.chunks[i].write_data(chunk_data)
+                time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.5
+                time.sleep(time_to_sleep)
+                #self.chunks[i].write_data_with_time_stamp(chunk_data,_time_stamp)
             else:
                 print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
         
         current_time_stamp=self.read_time_stamp()
         
-        if _time_stamp >= current_time_stamp:
-            self.update_time_stamp(_time_stamp+1)
+        print(" _TIME_SERVER {0} TIME_UPDATE ={1}  ".format(current_time_stamp,_time_stamp))
+
+        if _time_stamp >= current_time_stamp - TAU:
+            if(_time_stamp>=current_time_stamp):
+                self.update_time_stamp(_time_stamp+1)
+            else:
+                current_time_stamp=self.read_time_stamp()
+                self.update_time_stamp(current_time_stamp+1)
+        
+        
         
         
     
     def util_get_weights(self):
         ret=[]
+        private_time_stamp=[]
         for chunk in self.chunks:
             list_data=chunk.read_data()
             ret+=list_data.tolist()
-        return ret
+            private_time_stamp.append(chunk.read_time_stamp())
+        return (ret,private_time_stamp)
 
 
 

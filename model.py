@@ -21,14 +21,15 @@ class Network:
     
     def build_model(self,dataset_name):
         if dataset_name == 'mnist':
-            # self.add_layer(Convolutional(name='conv1', num_filters=8, stride=2, size=3, activation='relu'))
-            # self.add_layer(Convolutional(name='conv2', num_filters=8, stride=2, size=3, activation='relu'))
-            # self.add_layer(Dense(name='dense', nodes=8 * 6 * 6, num_classes=10))
-            self.add_layer(Convolutional(name='conv1', num_filters=6, stride=1, size=5, activation='relu'))
-            self.add_layer(Pooling(name='pool1', stride=2, size=2))
-            self.add_layer(Convolutional(name='conv2', num_filters=16, stride=1, size=5, activation='relu'))
-            self.add_layer(Pooling(name='pool2', stride=2, size=2))
-            self.add_layer(Dense(name='dense', nodes=400, num_classes=10))
+            self.add_layer(Convolutional(name='conv1', num_filters=8, stride=1, size=3, activation='xxrelu'))
+            self.add_layer(Pooling(name='pool0', stride=2, size=2))
+            self.add_layer(Dense(name='dense', nodes=8 * 13 * 13, num_classes=10))
+
+            # self.add_layer(Convolutional(name='conv1', num_filters=6, stride=1, size=3, activation='relu'))
+            # self.add_layer(Pooling(name='pool1', stride=2, size=2))
+            # self.add_layer(Convolutional(name='conv2', num_filters=16, stride=1, size=3, activation='relu'))
+            # self.add_layer(Pooling(name='pool2', stride=2, size=2))
+            # self.add_layer(Dense(name='dense', nodes=400, num_classes=10))
             total_weights=0
             for i in range(len(self.layers)):
                 w_layer_i=len(self.layers[i].get_weights())
@@ -52,10 +53,7 @@ class Network:
     def forward(self,image,plot_feature_maps):
         global history
         for layer in self.layers:
-         #   print('\nforwarding class {0}'.format(layer.name))
-            if plot_feature_maps:
-                image=(image*255)[0,:,:]
-                plot_sample(image,None,None)
+        
             image=layer.forward(image)
         return image
     def backward(self,gradient,learning_rate):
@@ -69,72 +67,66 @@ class Network:
     #    print('\nbackward gradient {0}'.format(gradient))
         
     
-    def train(self,type_n_thread,trains,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
+    def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
         _time_stamp=self.server.read_time_stamp()
-        current_model_weights=self.server.util_get_weights()
+        (current_model_weights,list_time_stamp)=self.server.util_get_weights()
+        print(list_time_stamp)
         self.set_weights_for_layer(current_model_weights)
        
         history = {'loss': [], 'accuracy': [], 'val_loss': [], 'val_accuracy': []}
         for epoch in range(1, num_epochs + 1):
             print('\n--- Epoch {0} ---'.format(epoch))
-            loss, tmp_loss, num_corr = 0, 0, 0
+            permutation = np.random.permutation(len(dataset["train_images"]))
+            train_images=dataset["train_images"]
+            train_labels=dataset["train_labels"]
+            train_images = train_images[permutation]
+            train_labels = train_labels[permutation]
+            
+            loss = 0
+            num_correct = 0
             initial_time = time.time()
-            for i in range(len(trains['train_images'])):
-                
+            #for i, (im, label) in enumerate(zip(train_images, train_labels)):
+            for i ,(image,label) in enumerate(zip(train_images,train_labels)):
                 if i % 100 == 99:
-                    accuracy = (num_corr / (i + 1)) * 100       # compute training accuracy and loss up to iteration i
-                    loss = tmp_loss / (i + 1)
+                    print('[Step %d] Past 100 steps: Average Loss %.3f | Accuracy: %d%%' %(i + 1, loss / 100, num_correct))
+                    loss = 0
+                    num_correct = 0
 
                     history['loss'].append(loss)                # update history
-                    history['accuracy'].append(accuracy)
+                    history['accuracy'].append(num_correct/100)
+                    print("update_model_2_server timestamp= {0}",_time_stamp)
+                    self.update_weights_to_server(_time_stamp)
 
-                    if validate:
-                        indices = np.random.permutation(trains['validation_images'].shape[0])
-                        val_loss, val_accuracy = self.evaluate(
-                            trains['validation_images'][indices, :],
-                            trains['validation_labels'][indices],
-                            regularization,
-                            plot_correct=0,
-                            plot_missclassified=0,
-                            plot_feature_maps=0,
-                            verbose=0
-                        )
-                        history['val_loss'].append(val_loss)
-                        history['val_accuracy'].append(val_accuracy)
+                    _time_stamp=self.server.read_time_stamp()
+                    (current_model_weights,list_time_stamp)=self.server.util_get_weights()
+                    print(list_time_stamp)
+                    self.set_weights_for_layer(current_model_weights)
 
-                        if verbose:
-                            print('[Step %05d]: Loss %02.3f | Accuracy: %02.3f | Time: %02.2f seconds | '
-                                  'Validation Loss %02.3f | Validation Accuracy: %02.3f' %
-                                  (i + 1, loss, accuracy, time.time() - initial_time, val_loss, val_accuracy))
-                    elif verbose:
-                        print('[Step %05d]: Loss %02.3f | Accuracy: %02.3f | Time: %02.2f seconds' %
-                              (i + 1, loss, accuracy, time.time() - initial_time))
-
-                    # restart time
-                    initial_time = time.time()
-
-                image = trains['train_images'][i]
-                label = trains['train_labels'][i]
+                #image=np.pad(image, ((0,0),(2,2),(2,2)),constant_values=0)
                 
-                image=np.pad(image, ((0,0),(2,2),(2,2)),constant_values=0)
-
                 tmp_output = self.forward(image, plot_feature_maps=0)       # forward propagation
-
+                l = -np.log(tmp_output[label])
+                acc = 1 if np.argmax(tmp_output) == label else 0
                 # compute (regularized) cross-entropy and update loss
-                tmp_loss += regularized_cross_entropy(self.layers, regularization, tmp_output[label])
+                #tmp_loss += regularized_cross_entropy(self.layers, regularization, tmp_output[label])
+                loss += l
+                num_correct += acc
 
-                if np.argmax(tmp_output) == label:                          # update accuracy
-                    num_corr += 1
-
-                gradient = np.zeros(10)                                     # compute initial gradient
-                gradient[label] = -1 / tmp_output[label] + np.sum(
-                    [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers])
+                gradient = np.zeros(10)
+                gradient[label] = -1 / tmp_output[label]
+                
+                #gradient = np.zeros(10)
+                                                     # compute initial gradient
+                # gradient[label] = -1 / tmp_output[label] + np.sum(
+                #     [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers])
 
                 learning_rate = lr_schedule(learning_rate, iteration=i)     # learning rate decay
 
                 self.backward(gradient, learning_rate)                      # backward propagation
+
         plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
+       
         if verbose:
             print('Train Loss: %02.3f' % (history['loss'][-1]))
             print('Train Accuracy: %02.3f' % (history['accuracy'][-1]))
@@ -212,7 +204,7 @@ class Network:
         #     #         if 'pool' not in layer.name:
         #     #             plot_histogram(layer.name, layer.get_weights())
         
-        self.update_weights_to_server(_time_stamp)
+        # self.update_weights_to_server(_time_stamp)
     
     def evaluate(self,X,y,regularization,plot_correct,plot_missclassified,plot_feature_maps,verbose):
         loss,num_correct=0,0
