@@ -27,6 +27,8 @@ import tensorflow as tf
 '''
 
 
+
+
 dataset_name = 'mnist'
 
 learning_rate = 0.01

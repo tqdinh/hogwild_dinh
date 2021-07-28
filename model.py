@@ -69,15 +69,25 @@ class Network:
     
     def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
+
+        is_show_debug_info=False
+        if 0==type_n_thread:
+            is_show_debug_info=True
+
+        #print("THREAD[{0}] start to train".format(type_n_thread))
+
         _time_stamp=self.server.read_time_stamp()
         (current_model_weights,list_time_stamp)=self.server.server_util_get_weights()
         
+        t1=time.time()
         self.set_weights_for_layer(current_model_weights)
-       
+        if True==is_show_debug_info:
+            print("THREAD[{0}]  set weight  in ".format(type_n_thread,time.time()-t1))
+
         history = {'loss': [], 'accuracy': [], 'val_loss': [], 'val_accuracy': []}
         for epoch in range(0, num_epochs ):
             print('\n--- Epoch {0} ---'.format(epoch))
-            print(list_time_stamp)
+            #print(list_time_stamp)
             permutation = np.random.permutation(len(dataset["train_images"]))
             train_images=dataset["train_images"]
             train_labels=dataset["train_labels"]
@@ -88,26 +98,40 @@ class Network:
             loss = 0
             num_correct = 0
             initial_time = time.time()
-            #for i, (im, label) in enumerate(zip(train_images, train_labels)):
             for i ,(image,label) in enumerate(zip(train_images,train_labels)):
                 if i % 100 == 99:
-                    print('[Step %d] Past 100 steps: Average Loss %.3f | Accuracy: %d%%' %(i + 1, loss / 100, num_correct))
+                    executed_time=time.time()-initial_time
+                    initial_time= time.time()
+
+                    print('[Step %d] Past 100 steps [%.fs]: Average Loss %.3f | Accuracy: %d%%' %(i + 1,executed_time, loss / 100, num_correct))
                     loss = 0
                     num_correct = 0
 
                     history['loss'].append(loss)                # update history
                     history['accuracy'].append(num_correct/100)
-                    #print("THREAD[{0}] update timestamp= {1}".format(type_n_thread,_time_stamp))
-                    self.update_weights_to_server(type_n_thread,_time_stamp)
+                    
 
+                    start_update_time=time.time()-initial_time
+                    
+                    self.update_weights_to_server(type_n_thread,_time_stamp)
+                    end_update_time=time.time()-initial_time
+
+                    if True==is_show_debug_info:
+                        print("THREAD[{0}] step:{1} update done after {2}".format(type_n_thread,i+1,end_update_time-start_update_time))
+                    
                     _time_stamp=self.server.read_time_stamp()
                     (current_model_weights,list_time_stamp)=self.server.server_util_get_weights()
                     print(list_time_stamp)
+                    t2=time.time()
                     self.set_weights_for_layer(current_model_weights)
+                    if True==is_show_debug_info:
+                        print("THREAD[{0}]  step:{1} set weight  in {2}".format(type_n_thread,i+1,time.time()-t2))
 
                 #image=np.pad(image, ((0,0),(2,2),(2,2)),constant_values=0)
-                
+                t3=time.time()
                 tmp_output = self.forward(image, plot_feature_maps=0)       # forward propagation
+                if True==is_show_debug_info:
+                    print("THREAD[{0}]  step:{1} foward  in {2}".format(type_n_thread,i+1,time.time()-t3))
                 l = -np.log(tmp_output[label])
                 acc = 1 if np.argmax(tmp_output) == label else 0
                 # compute (regularized) cross-entropy and update loss
@@ -124,11 +148,13 @@ class Network:
                 #     [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers])
 
                 learning_rate = lr_schedule(learning_rate, iteration=i)     # learning rate decay
-
+                t4=time.time()
                 self.backward(gradient, learning_rate)                      # backward propagation
-
-                
-        plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
+                if True==is_show_debug_info:
+                    print("THREAD[{0}] step{1} backward  in {2}".format(type_n_thread,i+1,time.time()-t4))
+    
+            print("loss  thread:{0}   epoch:{1}  loss:{2}".format(type_n_thread,epoch,loss))
+            plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
        
     
     def evaluate(self,X,y,regularization,plot_correct,plot_missclassified,plot_feature_maps,verbose):
@@ -169,6 +195,8 @@ class Network:
         return weights
 
     def update_weights_to_server(self,n_th_thread,time_stamp):
+
+
         weights=[]
         for i in range(0,len(self.layers)):
             layer=self.layers[i]

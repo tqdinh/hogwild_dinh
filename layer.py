@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.core.fromnumeric import shape
 from numpy.lib.function_base import gradient
-import copy
+
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x), axis=0)
@@ -104,11 +104,12 @@ class Convolutional:                                        # convolution layer 
         return np.reshape(self.filters, -1)
 
     def set_weights(self,new_weights):
-        shape0=self.filters.shape[0]
-        shape1=self.filters.shape[1]
-        shape2=self.filters.shape[2]
-        tmp_filter=np.reshape(new_weights,(shape0,shape1,shape2))
-        self.filters=copy.copy(tmp_filter)
+        # shape0=self.filters.shape[0]
+        # shape1=self.filters.shape[1]
+        # shape2=self.filters.shape[2]
+        #tmp_filter=np.reshape(new_weights,(shape0,shape1,shape2))
+        #self.filters=copy.copy(tmp_filter)
+        self.filters=np.reshape(new_weights,newshape=(self.filters.shape[0],self.filters.shape[1],self.filters.shape[2]))
 
 
 class Pooling:                                              # max pooling layer using pool size equal to 2
@@ -266,5 +267,5 @@ class Dense:
         return np.reshape(self.weights, -1)
 
     def set_weights(self,new_weights):
-        self.weights=np.reshape(copy.copy(new_weights),(self.weights.shape[0],self.weights.shape[1]))
+        self.weights=np.reshape(new_weights,newshape=(self.weights.shape[0],self.weights.shape[1]))
         
