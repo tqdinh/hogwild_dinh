@@ -44,7 +44,7 @@ class DATA_CHUNKS_HANDLER:
             self.write_lock.acquire()
             self.data=copy.copy(_data)
             self.private_time_stamp_chunk=self.private_time_stamp_chunk+1
-            print("chunk written with time stamp= ",self.private_time_stamp_chunk)
+            #print("chunk written with time stamp= ",self.private_time_stamp_chunk)
             self.write_lock.release() 
         
         def chunk_check_write_locked(self):
@@ -115,39 +115,37 @@ class DATA_CHUNKS_HANDLER:
        
         data_queue=[]
         for i in range(0, len(_data_chunks)):
-            data_queue.append({"data":_data_chunks[i],"index":i}) 
+            tub=(copy.copy(_data_chunks[i]),i)
+            data_queue.append(tub) 
         
         
-        # while len(data_queue)>0:
-        #     (data,index)=data_queue.pop(0)
-
-        #     current_time_stamp=self.read_time_stamp()
-        #     print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
-        #     if _time_stamp >= current_time_stamp - TAU:
-        #         is_chunk_locked=self.chunks[i].chunk_check_write_locked()
-        #         if False==is_chunk_locked:
-        #             self.chunks[i].chunk_write_data(data)
-        #         else:
-        #             data_queue.append({"data":_data_chunks[i],"index":index}) 
-        #     else:
-        #         print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
-
-            
-       
-       
-        for i in range(0, len(_data_chunks)):
+        while len(data_queue)>0:
+            (data,index)=data_queue.pop(0)
             current_time_stamp=self.read_time_stamp()
             #print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
             if _time_stamp >= current_time_stamp - TAU:
-                chunk_data=_data_chunks[i].chunk_read_data()
-                chunk_time_stamp=_data_chunks[i].chunk_read_time_stamp()
-                is_chunk_locked=self.chunks[i].chunk_check_write_locked()
-                self.chunks[i].chunk_write_data(chunk_data)
-                #time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.5
-                #time.sleep(time_to_sleep)
-                
+                is_chunk_locked=self.chunks[index].chunk_check_write_locked()
+                if False==is_chunk_locked:
+                    self.chunks[index].chunk_write_data(data.chunk_read_data())
+                else:
+                    data_queue.append((_data_chunks[index],index)) 
             else:
                 print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
+
+       
+        # for i in range(0, len(_data_chunks)):
+        #     current_time_stamp=self.read_time_stamp()
+        #     #print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
+        #     if _time_stamp >= current_time_stamp - TAU:
+        #         chunk_data=_data_chunks[i].chunk_read_data()
+        #         chunk_time_stamp=_data_chunks[i].chunk_read_time_stamp()
+        #         is_chunk_locked=self.chunks[i].chunk_check_write_locked()
+        #         self.chunks[i].chunk_write_data(chunk_data)
+        #         #time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.5
+        #         #time.sleep(time_to_sleep)
+                
+        #     else:
+        #         print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
         
         current_time_stamp=self.read_time_stamp()
         

@@ -5,7 +5,7 @@ import numpy as np
 import time
 from hogwild_server import *
 from config import *
-
+import random
  
 
 class Network:
@@ -69,10 +69,11 @@ class Network:
     
     def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
+        batch_size=1000
 
         is_show_debug_info=False
-        if 0==type_n_thread:
-            is_show_debug_info=True
+        # if 0==type_n_thread:
+        #     is_show_debug_info=True
 
         #print("THREAD[{0}] start to train".format(type_n_thread))
 
@@ -88,12 +89,16 @@ class Network:
         for epoch in range(0, num_epochs ):
             print('\n--- Epoch {0} ---'.format(epoch))
             #print(list_time_stamp)
+            
             permutation = np.random.permutation(len(dataset["train_images"]))
             train_images=dataset["train_images"]
             train_labels=dataset["train_labels"]
             train_images = train_images[permutation]
             train_labels = train_labels[permutation]
 
+            train_images=train_images[0:batch_size]
+            train_labels=train_labels[0:batch_size]
+            
             
             loss = 0
             num_correct = 0
