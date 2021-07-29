@@ -29,6 +29,14 @@ def lr_schedule_exponential(learning_rate,iteration):
     k=0.1
     return learning_rate* np.exp(-k * iteration)
 
+def lr_schedule_time_base(learning_rate,iteration):
+    learning_rate*=(1. / (1. + 0.9 * iteration))
+    return learning_rate
+
+ 
+
+    
+
 
 def lr_schedule(learning_rate, iteration):
     if iteration >= 0:
