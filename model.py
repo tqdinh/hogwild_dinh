@@ -1,5 +1,5 @@
 from numpy.lib.function_base import gradient
-from layer import Convolutional, Pooling, FullyConnected, Dense, regularized_cross_entropy, lr_schedule
+from layer import Convolutional, Pooling, FullyConnected, Dense, regularized_cross_entropy, lr_schedule,lr_schedule_exponential
 from inout import plot_sample, plot_learning_curve, plot_accuracy_curve, plot_histogram
 import numpy as np
 import time
@@ -122,7 +122,7 @@ class Network:
                     end_update_time=time.time()-initial_time
 
                     if True==is_show_debug_info:
-                        print("THREAD[{0}] step:{1} update done after {2}".format(type_n_thread,i+1,end_update_time-start_update_time))
+                        print("THREAD[{0}] epoch{1} step:{2} update done after {3}".format(type_n_thread,epoch,i+1,end_update_time-start_update_time))
                     
                     _time_stamp=self.server.read_time_stamp()
                     (current_model_weights,list_time_stamp)=self.server.server_util_get_weights()
@@ -152,7 +152,7 @@ class Network:
                 # gradient[label] = -1 / tmp_output[label] + np.sum(
                 #     [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers])
 
-                learning_rate = lr_schedule(learning_rate, iteration=i)     # learning rate decay
+                learning_rate = lr_schedule_exponential(learning_rate, iteration=i)     # learning rate decay
                 t4=time.time()
                 self.backward(gradient, learning_rate)                      # backward propagation
                 if True==is_show_debug_info:

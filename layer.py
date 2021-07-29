@@ -25,6 +25,10 @@ def leakyReLU(x, alpha=0.001):
 def leakyReLU_derivative(x, alpha=0.01):
     return alpha if x < 0 else 1
 
+def lr_schedule_exponential(learning_rate,iteration):
+    k=0.1
+    return learning_rate* np.exp(-k * iteration)
+
 
 def lr_schedule(learning_rate, iteration):
     if iteration >= 0:
@@ -33,6 +37,7 @@ def lr_schedule(learning_rate, iteration):
         return learning_rate * 0.1
     if iteration > 30000:
         return learning_rate * 0.1
+
 
 
 class Convolutional:                                        # convolution layer using 3x3 filters

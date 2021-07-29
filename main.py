@@ -151,7 +151,7 @@ for i_type in range(len(plotting_info["n_thread_type"])):
 # ‘k’	black
 # ‘w’	white
 
-color_val=['b','b','r','c','m','y']
+color_val=['b','g','r','c','m','y']
 
 for i in range(0,len(plotting_info["n_thread_type"])):
     n_threads=plotting_info["n_thread_type"][i]
@@ -163,7 +163,7 @@ for i in range(0,len(plotting_info["n_thread_type"])):
         epoch_type_val.append(min_val_on_epoch)
         print("epoch {0} thread min vallue = {1} ".format(j,min_val_on_epoch))
 
-    color=color_val[i]
+    color=color_val[i%len(color_val)]
     line_lable="n_thread = {0}".format(n_threads)
 
     plt.plot(epoch_type_val, color, linewidth=1.0, label=line_lable)    
