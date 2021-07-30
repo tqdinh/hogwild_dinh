@@ -69,7 +69,7 @@ class Network:
     
     def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
-        batch_size=1000
+        batch_size=400
 
         is_show_debug_info=False
         # if 0==type_n_thread:
