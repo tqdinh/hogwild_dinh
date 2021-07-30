@@ -1,5 +1,5 @@
 from numpy.lib.function_base import gradient
-from layer import Convolutional, Pooling, FullyConnected, Dense, regularized_cross_entropy, lr_schedule,lr_schedule_exponential,lr_schedule_time_base
+from layer import *
 from inout import plot_sample, plot_learning_curve, plot_accuracy_curve, plot_histogram
 import numpy as np
 import time
@@ -152,7 +152,14 @@ class Network:
                 # gradient[label] = -1 / tmp_output[label] + np.sum(
                 #     [2 * regularization * np.sum(np.absolute(layer.get_weights())) for layer in self.layers])
 
-                learning_rate = lr_schedule_time_base(learning_rate, iteration=i)     # learning rate decay
+                #learning_rate = lr_schedule(learning_rate, iteration=i)     # learning rate decay
+               
+                #learning_rate=learning_rate * np.exp(-0.1*i)
+
+                learning_rate=lr_schedule_step_decay(learning_rate,epoch)
+
+                #learning_rate=learning_rate * (0.75 ** np.floor(epoch/10))
+
                 t4=time.time()
                 self.backward(gradient, learning_rate)                      # backward propagation
                 if True==is_show_debug_info:

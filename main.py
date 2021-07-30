@@ -31,7 +31,7 @@ import tensorflow as tf
 
 dataset_name = 'mnist'
 
-learning_rate = 0.01
+learning_rate = 10e-4
 validate = 0
 regularization = 0
 verbose = 1

@@ -29,9 +29,21 @@ def lr_schedule_exponential(learning_rate,iteration):
     k=0.1
     return learning_rate* np.exp(-k * iteration)
 
+def lr_schedule_step_decay(learning_rate,epoch):
+    decay_factor=0.75
+    return learning_rate * (decay_factor ** np.floor(epoch/10))
+    
+
+
 def lr_schedule_time_base(learning_rate,iteration):
     learning_rate*=(1. / (1. + 0.9 * iteration))
     return learning_rate
+
+def lr_schedule_step_base(learning_rate,iteration,epoch, factor=0.25, dropEvery=400):
+    exp = np.floor((1 + epoch) /dropEvery)
+    learning_rate = learning_rate * (factor ** exp)
+    return learning_rate
+
 
  
 
