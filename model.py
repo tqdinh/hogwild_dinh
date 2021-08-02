@@ -1,19 +1,47 @@
+from multiprocessing.context import Process
 from numpy.lib.function_base import gradient
 from layer import *
 from inout import plot_sample, plot_learning_curve, plot_accuracy_curve, plot_histogram
 import numpy as np
 import time
 from hogwild_server import *
-from config import *
+
 import random
+
  
 
-class Network:
-    def __init__(self) :
+class Network(Process):
+    def __init__(self,_thread_index,_n_threads,_trains,
+        _num_epochs,_learning_rate,_validate,_regularization,
+        _plot_weights,_verbose,_list_of_loss_thread,_server,_queue) :
+        Process.__init__(self)  # Call the parent class initialization method
         self.layers=[]
-      
-        self.server=DATA_CHUNKS_HANDLER.getInstance()
         
+        self.thread_index=_thread_index
+        self.n_threads=_n_threads
+        self.trains=_trains
+        self.num_epochs=_num_epochs
+        self.learning_rate=_learning_rate
+        self.validate=_validate
+        self.regularization=_regularization
+        self.plot_weights=_plot_weights
+        self.verbose=_verbose
+        self.list_of_loss_thread=_list_of_loss_thread
+        self.server:DATA_CHUNKS_HANDLER=_server
+        self.plot_val=[]
+        self.queue=_queue
+    
+    def run(self):    
+        self.build_model("mnist")
+        self.train(
+            self.n_threads,
+            self.trains,
+            self.num_epochs,
+            self.learning_rate,
+            self.validate,
+            self.regularization,
+            self.plot_weights,
+            self.verbose)
         
     def add_layer(self,layer):
         self.layers.append(layer)
@@ -37,7 +65,7 @@ class Network:
                 total_weights+=w_layer_i
                 
             rand=np.random.rand(total_weights)*0.1
-            self.server = DATA_CHUNKS_HANDLER.getInstance()
+            
             self.server.set_init_weight(rand)
 
                     
@@ -65,11 +93,18 @@ class Network:
             #print('\nname={0}   weight {1}'.format(layer.name,weight.shape))
 #           print('\nbackward  class gradient {0}'.format(gradient))
     #    print('\nbackward gradient {0}'.format(gradient))
-        
+
+
     
-    def train(self,type_n_thread,dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
+    def train(self,type_n_thread,
+                dataset,num_epochs,learning_rate,validate,regularization,plot_weights,verbose):    
         
-        batch_size=400
+
+        plotting=[]
+        # for i in range(num_epochs):
+        #     plotting.append([])
+
+        batch_size=500
 
         is_show_debug_info=False
         # if 0==type_n_thread:
@@ -108,7 +143,7 @@ class Network:
                     executed_time=time.time()-initial_time
                     initial_time= time.time()
 
-                    print('[Step %d] Past 100 steps [%.fs]: Average Loss %.3f | Accuracy: %d%%' %(i + 1,executed_time, loss / 100, num_correct))
+                    print('[Step %d] Past 100 steps Time [%.fs]: Average Loss %.3f | Accuracy: %d%%' %(i + 1,executed_time, loss / 100, num_correct))
                     loss = 0
                     num_correct = 0
 
@@ -119,6 +154,8 @@ class Network:
                     start_update_time=time.time()-initial_time
                     
                     self.update_weights_to_server(type_n_thread,_time_stamp)
+
+
                     end_update_time=time.time()-initial_time
 
                     if True==is_show_debug_info:
@@ -166,14 +203,19 @@ class Network:
                     print("THREAD[{0}] step{1} backward  in {2}".format(type_n_thread,i+1,time.time()-t4))
     
             print("loss  thread:{0}   epoch:{1}  loss:{2}".format(type_n_thread,epoch,loss))
-            plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
-       
+            plotting.append(loss)
+            #plotting_info["loss_vals"][type_n_thread][epoch].append(loss)
+        self.queue.put(plotting)
+        return plotting
+    
+    def get_plot_val(self):
+        return self.plot_val
     
     def evaluate(self,X,y,regularization,plot_correct,plot_missclassified,plot_feature_maps,verbose):
         loss,num_correct=0,0
         for i in range(len(X)):
             tmp_output=self.forward(X[i],plot_feature_maps)
-
+            
             loss+=regularized_cross_entropy(self.layers,regularization,tmp_output[y[i]])
 
             prediction =np.argmax(tmp_output)
@@ -220,9 +262,12 @@ class Network:
         chunks=[]
         
         for j in range(0,len(array_weight)):
-            chunks.append(DATA_CHUNKS_HANDLER.DATA_CHUNK(array_weight[j]))
+            chunks.append(DATA_CHUNK(array_weight[j]))
         
-        self.server.update_data_chunks_thread(n_th_thread,chunks,time_stamp)        
+        self.server.update_data_chunks_thread_with_weight(n_th_thread,array_weight,time_stamp)
+        
+        #self.server.update_data_chunks_thread(n_th_thread,chunks,time_stamp)        
+        #self.server.do_nothings(array_weight)
         
             
 

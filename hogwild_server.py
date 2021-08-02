@@ -8,77 +8,82 @@ from typing import List
 import numpy as np
 from config import *
 
+class DATA_CHUNK:
+    def __init__(self,_weights):
+        self.data=copy.copy(_weights)
+        
+        self.private_time_stamp_chunk=0
+
+        self.write_lock=Lock()
+        
+             
+    def chunk_write_data(self,_data):
+        self.write_lock.acquire()
+        self.data=copy.copy(_data)
+        self.private_time_stamp_chunk=self.private_time_stamp_chunk+1
+        #print("chunk written with time stamp= ",self.private_time_stamp_chunk)
+        self.write_lock.release() 
+    
+    def chunk_check_write_locked(self):
+        ret=self.write_lock.locked()
+        if True==ret:
+            print("Chunk is LOCK!!!!")
+        
+        return ret
+
+
+    def chunk_read_data(self):
+        ret=[]
+        while True: 
+            if True != self.write_lock.locked():
+                ret= self.data
+                break
+            else:
+                print("thread is block")
+            
+        return ret
+        #return (ret,self.private_time_stamp_chunk)
+    def chunk_read_time_stamp(self):
+        ret=0
+        while True: 
+            if True != self.write_lock.locked():
+                ret= self.private_time_stamp_chunk
+                break
+            else:
+                print("thread is block")
+            
+        return ret
+        #return (ret,self.private_time_stamp_chunk)
+
 
 
 class DATA_CHUNKS_HANDLER:
 
-
-    __instance = None
-    @staticmethod 
-    def getInstance():
-      """ Static access method. """
-      if DATA_CHUNKS_HANDLER.__instance == None:
-         DATA_CHUNKS_HANDLER()
-      return DATA_CHUNKS_HANDLER.__instance
+    
+    # __instance = None
+    # @staticmethod 
+    # def getInstance():
+    #   """ Static access method. """
+    #   if DATA_CHUNKS_HANDLER.__instance == None:
+    #      DATA_CHUNKS_HANDLER()
+    #   return DATA_CHUNKS_HANDLER.__instance
     def __init__(self):
         
         self.time_stamp_lock=Lock()
         self.time_stamp=0
         self.chunks=[]
-        """ Virtually private constructor. """
-        if DATA_CHUNKS_HANDLER.__instance != None:
-            raise Exception("This class is a singleton!")
-        else:
-            DATA_CHUNKS_HANDLER.__instance = self
-
-    class DATA_CHUNK:
-        def __init__(self,_weights):
-            self.data=copy.copy(_weights)
-            
-            self.private_time_stamp_chunk=0
-
-            self.write_lock=Lock()
-            
-             
-        def chunk_write_data(self,_data):
-            self.write_lock.acquire()
-            self.data=copy.copy(_data)
-            self.private_time_stamp_chunk=self.private_time_stamp_chunk+1
-            #print("chunk written with time stamp= ",self.private_time_stamp_chunk)
-            self.write_lock.release() 
-        
-        def chunk_check_write_locked(self):
-            ret=self.write_lock.locked()
-            if True==ret:
-                print("Chunk is LOCK!!!!")
-            
-            return ret
-
-
-        def chunk_read_data(self):
-            ret=[]
-            while True: 
-                if True != self.write_lock.locked():
-                    ret= self.data
-                    break
-                else:
-                    print("thread is block")
-                
-            return ret
-            #return (ret,self.private_time_stamp_chunk)
-        def chunk_read_time_stamp(self):
-            ret=0
-            while True: 
-                if True != self.write_lock.locked():
-                    ret= self.private_time_stamp_chunk
-                    break
-                else:
-                    print("thread is block")
-                
-            return ret
-            #return (ret,self.private_time_stamp_chunk)
+        self.my_name=random.randint(3, 9)
     
+        # print("nnnnnnnnnn",self.my_name)
+        # """ Virtually private constructor. """
+        # if DATA_CHUNKS_HANDLER.__instance != None:
+        #     raise Exception("This class is a singleton!")
+        # else:
+        #     DATA_CHUNKS_HANDLER.__instance = self
+
+   
     def set_init_weight(self,_init_weight:List):
+        print("init weight")
         
         if len(self.chunks) >0:
             return 
@@ -86,9 +91,12 @@ class DATA_CHUNKS_HANDLER:
         _init_weight_splited=np.array_split(_init_weight,NUMBER_OF_MODEL_SPLITED)
 
         for i in range(0,len(_init_weight_splited)):
-            self.chunks.append(self.DATA_CHUNK(_init_weight_splited[i]))
+            self.chunks.append(DATA_CHUNK(_init_weight_splited[i]))
+    
+    
     
     def read_time_stamp(self):
+
         ret=any
         while True:
             if True != self.time_stamp_lock.locked():
@@ -110,9 +118,16 @@ class DATA_CHUNKS_HANDLER:
         self.time_stamp =_time_stamp
         self.time_stamp_lock.release()
     
+    def do_sthing(self,n_th_thread,_data_chunks,_time_stamp):
+        return
+    def do_nothings(self,stuff):
+        data_queue=[]
+
+        return
+        
     def update_data_chunks_thread(self,n_th_thread,_data_chunks,_time_stamp):
-        print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
-       
+        #print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
+        
         data_queue=[]
         for i in range(0, len(_data_chunks)):
             tub=(copy.copy(_data_chunks[i]),i)
@@ -147,6 +162,36 @@ class DATA_CHUNKS_HANDLER:
         #     else:
         #         print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
         
+        current_time_stamp=self.read_time_stamp()
+        
+        if _time_stamp >= current_time_stamp - TAU:
+            if(_time_stamp>=current_time_stamp):
+                self.update_time_stamp(_time_stamp+1)
+            else:
+                current_time_stamp=self.read_time_stamp()
+                self.update_time_stamp(current_time_stamp+1)
+        
+    def update_data_chunks_thread_with_weight(self,n_th_thread,array_weight,_time_stamp):
+        print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
+        data_queue=[]
+        
+        for j in range(0,len(array_weight)):
+            tub=(copy.copy(DATA_CHUNK(array_weight[j])),j)
+            data_queue.append(tub) 
+        
+        while len(data_queue)>0:
+            (data,index)=data_queue.pop(0)
+            current_time_stamp=self.read_time_stamp()
+            #print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
+            if _time_stamp >= current_time_stamp - TAU:
+                is_chunk_locked=self.chunks[index].chunk_check_write_locked()
+                if False==is_chunk_locked:
+                    self.chunks[index].chunk_write_data(data.chunk_read_data())
+                else:
+                    data_queue.append(DATA_CHUNK(data),index)
+            else:
+                print("DELTA TIME IS TOO BIG {0}  vs {1} - {2}".format(_time_stamp," vs  ",current_time_stamp))
+
         current_time_stamp=self.read_time_stamp()
         
         if _time_stamp >= current_time_stamp - TAU:
@@ -198,7 +243,7 @@ def my_calculation(special_thread,server):
     chunks=[]
     for j in range (0,len(array_data_weight)):
         list_data=array_data_weight[j]
-        chunks.append(DATA_CHUNKS_HANDLER.DATA_CHUNK(list_data))
+        chunks.append(DATA_CHUNK(list_data))
     
     server.update_data_chunks_thread(chunks,my_time_stamp)
 
