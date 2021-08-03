@@ -117,7 +117,6 @@ if __name__ == "__main__":
         manager.start()
         my_server = manager.DATA_CHUNKS_HANDLER()
     
-
         my_queue=Queue()
         
         n_threads=plotting_info["n_thread_type"][i_type]
@@ -184,7 +183,7 @@ if __name__ == "__main__":
         print('valid Accuracy: %02.3f' % val_accuracy)
         
         val_acc="valid_loss={0} vallid_acc={1}  ".format(val_loss,val_accuracy)
-        plotting_info["info"].append(val_acc)
+        #plotting_info["info"].append(val_acc)
         
     
         tmp_loss_list_of_thread=[]
@@ -209,15 +208,15 @@ if __name__ == "__main__":
         epoch_type_val=plotting_info["loss_vals"][i]
         
         color=color_val[i%len(color_val)]
-        meta_info=plotting_info["info"][i]
-        line_lable="n_thread = {0} {1}".format(n_threads,meta_info)
+        #meta_info=plotting_info["info"][i]
+        line_lable="n_thread = {0} ".format(n_threads)
 
         plt.plot(epoch_type_val, color,marker='o', linewidth=1.0, label=line_lable)    
         plt.xlabel('epoch', fontsize=16)
         plt.ylabel('Loss', fontsize=16)
         plt.legend()
         plt.title('Loss with learning rate scheduled step decay ', fontsize=16)
-        plt.savefig('lr_schedule_step_decay.png')
+        plt.savefig('lr_schedule_step_decay_3.png')
     plt.show()
             
 

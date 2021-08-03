@@ -104,7 +104,7 @@ class Network(Process):
         # for i in range(num_epochs):
         #     plotting.append([])
 
-        batch_size=500
+        batch_size=1000
 
         is_show_debug_info=False
         # if 0==type_n_thread:
@@ -125,11 +125,11 @@ class Network(Process):
             print('\n--- Epoch {0} ---'.format(epoch))
             #print(list_time_stamp)
             
-            permutation = np.random.permutation(len(dataset["train_images"]))
+          #  permutation = np.random.permutation(len(dataset["train_images"]))
             train_images=dataset["train_images"]
             train_labels=dataset["train_labels"]
-            train_images = train_images[permutation]
-            train_labels = train_labels[permutation]
+            # train_images = train_images[permutation]
+            # train_labels = train_labels[permutation]
 
             train_images=train_images[0:batch_size]
             train_labels=train_labels[0:batch_size]
@@ -193,7 +193,7 @@ class Network(Process):
                
                 #learning_rate=learning_rate * np.exp(-0.1*i)
 
-                learning_rate=lr_schedule_step_decay(learning_rate,epoch)
+                learning_rate=lr_schedule_step_base(learning_rate,i,epoch)
 
                 #learning_rate=learning_rate * (0.75 ** np.floor(epoch/10))
 
