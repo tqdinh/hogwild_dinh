@@ -73,7 +73,32 @@ class DATA_CHUNKS_HANDLER:
         self.time_stamp=0
         self.chunks=[]
         self.my_name=random.randint(3, 9)
-    
+        self.tau=TAU[0]
+        # print("nnnnnnnnnn",self.my_name)
+        # """ Virtually private constructor. """
+        # if DATA_CHUNKS_HANDLER.__instance != None:
+        #     raise Exception("This class is a singleton!")
+        # else:
+        #     DATA_CHUNKS_HANDLER.__instance = self
+
+
+    def __init__(self):
+            
+        self.time_stamp_lock=Lock()
+        self.time_stamp=0
+        self.chunks=[]
+        self.my_name=random.randint(3, 9)
+        self.tau=TAU[0]
+        
+
+    def __init__(self,_tau):
+        
+        self.time_stamp_lock=Lock()
+        self.time_stamp=0
+        self.chunks=[]
+        self.my_name=random.randint(3, 9)
+        self.tau=_tau
+        print("TAU= ",self.tau)
         # print("nnnnnnnnnn",self.my_name)
         # """ Virtually private constructor. """
         # if DATA_CHUNKS_HANDLER.__instance != None:
@@ -138,7 +163,7 @@ class DATA_CHUNKS_HANDLER:
             (data,index)=data_queue.pop(0)
             current_time_stamp=self.read_time_stamp()
             #print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
-            if _time_stamp >= current_time_stamp - TAU:
+            if _time_stamp >= current_time_stamp - self.tau:
                 is_chunk_locked=self.chunks[index].chunk_check_write_locked()
                 if False==is_chunk_locked:
                     self.chunks[index].chunk_write_data(data.chunk_read_data())
@@ -164,7 +189,7 @@ class DATA_CHUNKS_HANDLER:
         
         current_time_stamp=self.read_time_stamp()
         
-        if _time_stamp >= current_time_stamp - TAU:
+        if _time_stamp >= current_time_stamp - self.tau:
             if(_time_stamp>=current_time_stamp):
                 self.update_time_stamp(_time_stamp+1)
             else:
@@ -172,7 +197,7 @@ class DATA_CHUNKS_HANDLER:
                 self.update_time_stamp(current_time_stamp+1)
         
     def update_data_chunks_thread_with_weight(self,n_th_thread,array_weight,_time_stamp):
-        print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
+        #print("\n---------THREAD[{0}]---------- update  with timestamp {1}".format(n_th_thread,_time_stamp))
         data_queue=[]
         
         for j in range(0,len(array_weight)):
@@ -182,8 +207,8 @@ class DATA_CHUNKS_HANDLER:
         while len(data_queue)>0:
             (data,index)=data_queue.pop(0)
             current_time_stamp=self.read_time_stamp()
-            #print("THREAD[{0}] read server time stamp{1}".format(n_th_thread,current_time_stamp))
-            if _time_stamp >= current_time_stamp - TAU:
+            
+            if _time_stamp >= current_time_stamp - self.tau:
                 is_chunk_locked=self.chunks[index].chunk_check_write_locked()
                 if False==is_chunk_locked:
                     self.chunks[index].chunk_write_data(data.chunk_read_data())
@@ -194,7 +219,7 @@ class DATA_CHUNKS_HANDLER:
 
         current_time_stamp=self.read_time_stamp()
         
-        if _time_stamp >= current_time_stamp - TAU:
+        if _time_stamp >= current_time_stamp - self.tau:
             if(_time_stamp>=current_time_stamp):
                 self.update_time_stamp(_time_stamp+1)
             else:

@@ -2,14 +2,18 @@ NUMBER_OF_DATA_SPLITED=30
 NUMBER_OF_CLIENT=1
 
 NUMBER_OF_MODEL_SPLITED=20
-TAU=20
-NUMBER_OF_EPOCH=10
+TAU=[1,3,5,10,15,20,50]
+TAU_ARRAY=[]
+NUMBER_OF_EPOCH=20
 EPOCH_CHECKPOINT=10
 RANDOM_SLEEP_TIME=3 # 1->20 * 0.1
 history={'loss':[],'accuracy':[],'val_loss':[],'val_accuracy':[]}
 
 #plotting_info={"n_thread_type":[1,3,5,10,15],"loss_vals":[]}
-plotting_info={"n_thread_type":[1],"loss_vals":[],"info":[]}
+#plotting_info={"n_thread_type":[1],"loss_vals":[],"info":[],"duration":[]}
+#plotting_info={"n_thread_type":[15],"loss_vals":[],"info":[],"duration":[],"accuracy":[]}
+plotting_info={"n_thread_type":[20],"loss_vals":[],"info":[],"duration":[],"accuracy":[]}
+#plotting_info={"n_thread_type":[3,5,10,15],"loss_vals":[],"info":[],"duration":[],"accuracy":[]}
 #plotting_info={"n_thread_type":[1,3,5,10,15,20 ],"loss_vals":[]}
 
 # for i in range(0,len(plotting_info["n_thread_type"])):

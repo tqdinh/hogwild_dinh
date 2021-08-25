@@ -1,4 +1,5 @@
 from multiprocessing import Process
+import numpy as np
 import time
 class Worker(Process):
     
@@ -25,3 +26,10 @@ class Worker(Process):
     
     def get_val(self):
         return self.my_val
+
+if __name__ == "__main__":
+    k=[]
+    list0=[1,2,3,4,5,6]
+    list1=[1,2,3,4,5,6]
+    k=1.0 * np.array([1,2,3,4,5,6])
+    k+=list1

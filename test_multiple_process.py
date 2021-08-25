@@ -48,5 +48,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    print(np.random.randint(1,3))
     

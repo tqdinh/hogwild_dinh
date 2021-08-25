@@ -1,6 +1,4 @@
 import numpy as np
-from numpy.core.fromnumeric import shape
-from numpy.lib.function_base import gradient
 
 
 def softmax(x):
@@ -25,30 +23,6 @@ def leakyReLU(x, alpha=0.001):
 def leakyReLU_derivative(x, alpha=0.01):
     return alpha if x < 0 else 1
 
-def lr_schedule_exponential(learning_rate,iteration):
-    k=0.1
-    return learning_rate* np.exp(-k * iteration)
-
-def lr_schedule_step_decay(learning_rate,epoch):
-    decay_factor=0.75
-    return learning_rate * (decay_factor ** np.floor(epoch/10))
-    
-
-
-def lr_schedule_time_base(learning_rate,iteration):
-    learning_rate*=(1. / (1. + 0.9 * iteration))
-    return learning_rate
-
-def lr_schedule_step_base(learning_rate,iteration,epoch, factor=0.25, dropEvery=400):
-    exp = np.floor((1 + epoch) /dropEvery)
-    learning_rate = learning_rate * (factor ** exp)
-    return learning_rate
-
-
- 
-
-    
-
 
 def lr_schedule(learning_rate, iteration):
     if iteration >= 0:
@@ -59,16 +33,11 @@ def lr_schedule(learning_rate, iteration):
         return learning_rate * 0.1
 
 
-
 class Convolutional:                                        # convolution layer using 3x3 filters
 
     def __init__(self, name, num_filters=16, stride=1, size=3, activation=None):
         self.name = name
-        
-        self.filters = np.random.randn(num_filters, size, size) * 0.1
-        #self.filters = np.zeros(shape=(num_filters, 3, 3)) * 0.1
-        
-        #print(self.filters)
+        self.filters = np.random.randn(num_filters, 3, 3) * 0.1
         self.stride = stride
         self.size = size
         self.activation = activation
@@ -77,7 +46,6 @@ class Convolutional:                                        # convolution layer 
         self.leakyReLU_derivative = np.vectorize(leakyReLU_derivative)
 
     def forward(self, image):
-        image=(image/255)-0.5
         self.last_input = image                             # keep track of last input for later backward propagation
 
         input_dimension = image.shape[1]                                                # input dimension
@@ -127,15 +95,9 @@ class Convolutional:                                        # convolution layer 
 
     def get_weights(self):
         return np.reshape(self.filters, -1)
-
+    
     def set_weights(self,new_weights):
-        # shape0=self.filters.shape[0]
-        # shape1=self.filters.shape[1]
-        # shape2=self.filters.shape[2]
-        #tmp_filter=np.reshape(new_weights,(shape0,shape1,shape2))
-        #self.filters=copy.copy(tmp_filter)
         self.filters=np.reshape(new_weights,newshape=(self.filters.shape[0],self.filters.shape[1],self.filters.shape[2]))
-
 
 class Pooling:                                              # max pooling layer using pool size equal to 2
     def __init__(self, name, stride=2, size=2):
@@ -189,108 +151,100 @@ class Pooling:                                              # max pooling layer 
         return dout
 
     def get_weights(self):                          # pooling layers have no weights
-        return np.array([])
-    
+        return []
     def set_weights(self,new_weights):
         return
 
-class FullyConnected:
-    def __init__(self,name,nodes1,nodes2,activation) :
-        self.name=name
-        self.weights=np.random.randn(nodes1,nodes2)*0.1
-        self.biases=np.zeros(nodes2)
-        self.activation=activation
-        self.last_input_shape=None
-        self.last_input=None
-        self.last_output=None
-        self.leakyReLU=np.vectorize(leakyReLU)
-        self.leakyReLU_derivative=np.vectorize(leakyReLU_derivative)
-    def forward(self,input):
-        self.last_input_shape=input.shape
-        input=input.flatten()
-        output=np.dot(input,self.weights)+self.biases
+class FullyConnected:                               # fully-connected layer
+    def __init__(self, name, nodes1, nodes2, activation):
+        self.name = name
+        self.weights = np.random.randn(nodes1, nodes2) * 0.1
+        self.biases = np.zeros(nodes2)
+        self.activation = activation
+        self.last_input_shape = None
+        self.last_input = None
+        self.last_output = None
+        self.leakyReLU = np.vectorize(leakyReLU)
+        self.leakyReLU_derivative = np.vectorize(leakyReLU_derivative)
 
-        if( self.activation== 'relu'):
+    def forward(self, input):
+        self.last_input_shape = input.shape         # keep track of last input shape before flattening
+                                                    # for later backward propagation
+
+        input = input.flatten()                                 # flatten input
+
+        output = np.dot(input, self.weights) + self.biases      # forward propagate
+
+        if self.activation == 'relu':                           # apply ReLU activation function
             self.leakyReLU(output)
-        self.last_input=input
-        self.last_output=output
+
+        self.last_input = input                     # keep track of last input and output for later backward propagation
+        self.last_output = output
 
         return output
-    def backward(self,din,learning_rate=0.005):
-        if self.activation=='relu':
-            self.leakyReLU_derivative(din)
-        self.last_input = np.expand_dims(self.last_input,axis=1)
-        din = np.expand_dims(din,axis=1)
-        dw=np.dot(self.last_input,np.transpose(din))
-        db=np.sum(din,axis=1).reshape(self.biases,shape)
 
-        self.weights-=learning_rate*dw
-        self.biases-= learning_rate( db)
+    def backward(self, din, learning_rate=0.005):
+        if self.activation == 'relu':                             # back propagate through ReLU
+           self.leakyReLU_derivative(din)
 
-        dout=np.dot(self.weights,din)
+        self.last_input = np.expand_dims(self.last_input, axis=1)
+        din = np.expand_dims(din, axis=1)
+
+        dw = np.dot(self.last_input, np.transpose(din))           # loss gradient of final dense layer weights
+        db = np.sum(din, axis=1).reshape(self.biases.shape)       # loss gradient of final dense layer biases
+
+        self.weights -= learning_rate * dw                        # update weights and biases
+        self.biases -= learning_rate * db
+
+        dout = np.dot(self.weights, din)
         return dout.reshape(self.last_input_shape)
+
     def get_weights(self):
-        return np.reshape(self.weights,-1)
+        return np.reshape(self.weights, -1)
 
-class Dense:
-    def __init__(self,name,nodes,num_classes) :
-        self.name=name
-        self.weights=np.random.randn(nodes,num_classes)*0.1
-        self.biases=np.zeros(num_classes)
-        self.last_input_shape=None
-        self.last_input= None
-        self.last_output=None
-    def forward(self,input):
-        self.last_input_shape=input.shape
 
-        input=input.flatten()
-        output=np.dot(input,self.weights)+ self.biases
-        self.last_input=input
-        self.last_output=output
+class Dense:                                        # dense layer with softmax activation
+    def __init__(self, name, nodes, num_classes):
+        self.name = name
+        self.weights = np.random.randn(nodes, num_classes) * 0.1
+        self.biases = np.zeros(num_classes)
+        self.last_input_shape = None
+        self.last_input = None
+        self.last_output = None
+
+    def forward(self, input):
+        self.last_input_shape = input.shape         # keep track of last input shape before flattening
+                                                    # for later backward propagation
+
+        input = input.flatten()                                 # flatten input
+
+        output = np.dot(input, self.weights) + self.biases      # forward propagate
+
+        self.last_input = input                     # keep track of last input and output for later backward propagation
+        self.last_output = output
+
         return softmax(output)
+
     def backward(self, din, learning_rate=0.005):
         for i, gradient in enumerate(din):
             if gradient == 0:                   # the derivative of the loss with respect to the output is nonzero
                 continue                        # only for the correct class, so skip if the gradient is zero
 
-            #max_fature=np.max(self.last_output)
-                                   
-            #t_exp = np.exp(self.last_output-max_fature)                      # gradient of dout[i] with respect to output
             t_exp = np.exp(self.last_output)                      # gradient of dout[i] with respect to output
-            S = np.sum(t_exp)
+            dout_dt = -t_exp[i] * t_exp / (np.sum(t_exp) ** 2)
+            dout_dt[i] = t_exp[i] * (np.sum(t_exp) - t_exp[i]) / (np.sum(t_exp) ** 2)
 
-            d_out_d_t = -t_exp[i] * t_exp / (S ** 2)
-            d_out_d_t[i] = t_exp[i] * (S- t_exp[i]) / (S** 2)
+            dt = gradient * dout_dt                               # gradient of loss with respect to output
 
-            d_t_d_w = self.last_input
-            d_t_d_b = 1
-            d_t_d_inputs = self.weights
+            dout = self.weights @ dt                              # gradient of loss with respect to input
 
-            d_L_d_t = gradient * d_out_d_t
+            # update weights and biases
+            self.weights -= learning_rate * (np.transpose(self.last_input[np.newaxis]) @ dt[np.newaxis])
+            self.biases -= learning_rate * dt
 
+            return dout.reshape(self.last_input_shape)            # return the loss gradient for this layer's inputs
 
-            d_L_d_w = d_t_d_w[np.newaxis].T @ d_L_d_t[np.newaxis]
-            d_L_d_b = d_L_d_t * d_t_d_b
-            d_L_d_inputs = d_t_d_inputs @ d_L_d_t
-            self.weights -= learning_rate * d_L_d_w
-            self.biases -= learning_rate * d_L_d_b
-
-            return d_L_d_inputs.reshape(self.last_input_shape)
-
-
-            # dt = gradient * dout_dt                               # gradient of loss with respect to output
-
-            # dout = self.weights @ dt                              # gradient of loss with respect to input
-
-            # # update weights and biases
-            # self.weights -= learning_rate * (np.transpose(self.last_input[np.newaxis]) @ dt[np.newaxis])
-            # self.biases -= learning_rate * dt
-
-            #return dout.reshape(self.last_input_shape)            # return the loss gradient for this layer's inputs
-        
     def get_weights(self):
         return np.reshape(self.weights, -1)
-
     def set_weights(self,new_weights):
         self.weights=np.reshape(new_weights,newshape=(self.weights.shape[0],self.weights.shape[1]))
-        

@@ -15,9 +15,8 @@ from multiprocessing import shared_memory, Process, Manager,Queue
 from multiprocessing import cpu_count, current_process
 import multiprocessing as mp
 import multiprocessing.managers as m
-
-
-
+import matplotlib.pyplot as bar_plt
+import os
 
 
 
@@ -105,6 +104,9 @@ if __name__ == "__main__":
    
     print('\n--- Loading ' + dataset_name + ' dataset ---')                 # load dataset
     dataset = load_mnist() if dataset_name == 'mnist' else load_cifar()
+
+    dataset = preprocess(dataset)
+
     train_images=dataset['train_images']
     train_lables=dataset['train_labels']
     validation_images=dataset['validation_images']
@@ -112,20 +114,22 @@ if __name__ == "__main__":
 
 
     for i_type in range(len(plotting_info["n_thread_type"])):
-
+        initial_time = time.time()
         manager = MyManager()
         manager.start()
-        my_server = manager.DATA_CHUNKS_HANDLER()
+        my_server = manager.DATA_CHUNKS_HANDLER(TAU[0])
     
         my_queue=Queue()
         
         n_threads=plotting_info["n_thread_type"][i_type]
 
+
+
         list_of_loss_thread=[]
         for j in range(n_threads):
             list_of_loss_thread.append([])
         
-        print(list_of_loss_thread)
+        #print(list_of_loss_thread)
         
         print('\n--- Building the model ---')                                   # build model
 
@@ -148,8 +152,8 @@ if __name__ == "__main__":
             verbose,list_of_loss_thread,my_server,my_queue)
             
 
-            time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.2
-            time.sleep(time_to_sleep)
+            # time_to_sleep=np.random.randint(1,RANDOM_SLEEP_TIME)*0.2
+            # time.sleep(time_to_sleep)
             process.start()
 
             processes.append(process)
@@ -162,27 +166,31 @@ if __name__ == "__main__":
         k=my_server.read_time_stamp()
         ws=my_server.server_util_get_weights()
         
+        end_time=  time.time()
+        execution_time=end_time-initial_time
+        
+        plotting_info["duration"].append(execution_time)
 
-        valid_model=Network(i,i_type,trains[i],NUMBER_OF_EPOCH,
-                learning_rate,validate,regularization,plot_weights,
-                verbose,list_of_loss_thread,my_server,my_queue)
-        valid_model.build_model(dataset_name)
-        valid_model.set_weights_for_layer(ws[0])
+        # valid_model=Network(i,i_type,trains[i],NUMBER_OF_EPOCH,
+        #         learning_rate,validate,regularization,plot_weights,
+        #         verbose,list_of_loss_thread,my_server,my_queue)
+        # valid_model.build_model(dataset_name)
+        # valid_model.set_weights_for_layer(ws[0])
 
     
 
-        indices=np.random.permutation(dataset['validation_images'].shape[0])
-        val_loss,val_accuracy=valid_model.evaluate(validation_images[indices, :],
-                                validation_labels[indices],
-                                regularization,
-                                plot_correct=0,
-                                plot_missclassified=0,
-                                plot_feature_maps=0,
-                                verbose=0)
-        print('Valid Loss: %02.3f' % val_loss)
-        print('valid Accuracy: %02.3f' % val_accuracy)
+        # indices=np.random.permutation(dataset['validation_images'].shape[0])
+        # val_loss,val_accuracy=valid_model.evaluate(validation_images[indices, :],
+        #                         validation_labels[indices],
+        #                         regularization,
+        #                         plot_correct=0,
+        #                         plot_missclassified=0,
+        #                         plot_feature_maps=0,
+        #                         verbose=0)
+        # print('Valid Loss: %02.3f' % val_loss)
+        # print('valid Accuracy: %02.3f' % val_accuracy)
         
-        val_acc="valid_loss={0} vallid_acc={1}  ".format(val_loss,val_accuracy)
+        # val_acc="valid_loss={0} vallid_acc={1}  ".format(val_loss,val_accuracy)
         #plotting_info["info"].append(val_acc)
         
     
@@ -204,19 +212,37 @@ if __name__ == "__main__":
         n_threads=plotting_info["n_thread_type"][i]
         print("in type {0} thread".format(n_threads))
         print(plotting_info["loss_vals"][i])
-        print(plotting_info["loss_vals"])
         epoch_type_val=plotting_info["loss_vals"][i]
         
         color=color_val[i%len(color_val)]
         #meta_info=plotting_info["info"][i]
         line_lable="n_thread = {0} ".format(n_threads)
 
-        plt.plot(epoch_type_val, color,marker='o', linewidth=1.0, label=line_lable)    
+        plt.plot(epoch_type_val, color, linewidth=1.0, label=line_lable)    
         plt.xlabel('epoch', fontsize=16)
         plt.ylabel('Loss', fontsize=16)
         plt.legend()
         plt.title('Loss with learning rate scheduled step decay ', fontsize=16)
-        plt.savefig('lr_schedule_step_decay_3.png')
+        plt.savefig('thread_accuracy.png')
     plt.show()
             
+
+
+            
+    lable=[]
+    val=[]
+    for i_type in range(len(plotting_info["n_thread_type"])):
+        n_threads=plotting_info["n_thread_type"][i_type]
+        _lable="{0}_thread".format(n_threads)
+        _val=plotting_info["duration"][i_type]
+        lable.append(_lable)
+        val.append(_val)
+    # creating the bar plot
+    bar_plt.bar(lable, val, color ='maroon',
+            width = 0.4)
+    bar_plt.xlabel("No. of process")
+    bar_plt.ylabel("Time in sec")
+    bar_plt.title("Time to execute  ")
+    bar_plt.savefig('time_execute.png')
+    bar_plt.show()
 
